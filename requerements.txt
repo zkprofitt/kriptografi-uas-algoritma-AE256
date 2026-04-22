@@ -5,7 +5,7 @@ mysql-connector-python
 streamlit
 
 
-
+nama database nya = db_fintech
 //struktur database
 CREATE TABLE pengajuan_pinjol (
     id INT AUTO_INCREMENT PRIMARY KEY,
