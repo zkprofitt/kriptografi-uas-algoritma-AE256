@@ -3,3 +3,30 @@ library yang harus di install:
 pycryptodome
 mysql-connector-python
 streamlit
+
+
+
+//struktur database
+CREATE TABLE pengajuan_pinjol (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nama_lengkap VARCHAR(255),
+    pekerjaan VARCHAR(100),
+    perusahaan VARCHAR(255),
+    tenor VARCHAR(50),
+    tujuan_pinjaman TEXT,
+    status_nikah VARCHAR(50),
+
+    -- Data Terenkripsi
+    nik_enc TEXT,
+    alamat_enc TEXT,
+    email_enc TEXT,
+    gaji_enc TEXT,
+    hp_enc TEXT,
+    kontak_darurat_enc TEXT,
+    rekening_enc TEXT,
+    nominal_pinjaman_enc TEXT,
+
+    -- Kunci pengacak unik per baris
+    iv_data VARCHAR(255),
+    tgl_pengajuan TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
