@@ -1,0 +1,5 @@
+library yang harus di install:
+
+pycryptodome
+mysql-connector-python
+streamlit
