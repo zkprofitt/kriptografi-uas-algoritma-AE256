@@ -119,13 +119,27 @@ with tab1:
 
         col_ceka, col_cekb = st.columns(2)
         with col_ceka:
-            st.write(f"Nama: **{d['nama']}**")
-            st.write(f"NIK: **{d['nik']}**")
-            st.write(f"HP: **{d['hp']}**")
+            st.markdown("#### 👤 Data Identitas")
+            st.write(f"**Nama Lengkap:** {d['nama']}")
+            st.write(f"**NIK:** {d['nik']}")
+            st.write(f"**Status Nikah:** {d['status']}")
+            st.write(f"**HP:** {d['hp']}")
+            st.write(f"**Email:** {d['email']}")
+            st.write(f"**Alamat:** {d['alamat']}")
+
+            st.markdown("#### 💼 Data Finansial")
+            st.write(f"**Pekerjaan:** {d['pekerjaan']}")
+            st.write(f"**Perusahaan:** {d['nama_pt']}")
+            st.write(f"**Gaji:** {format_rupiah(d['gaji'])}")
+            st.write(f"**Nama di Rekening:** {d['nama_bank_user']}")
+            st.write(f"**Rekening:** {d['bank']}")
+            st.write(f"**Kontak Darurat:** {d['darurat']}")
+
         with col_cekb:
-            st.write(f"Gaji: **{format_rupiah(d['gaji'])}**")
-            st.write(f"Pinjaman: **{format_rupiah(d['nominal'])}**")
-            st.write(f"Tenor: **{d['tenor']}**")
+            st.markdown("#### 💰 Detail Pinjaman")
+            st.write(f"**Nominal Pinjaman:** {format_rupiah(d['nominal'])}")
+            st.write(f"**Tenor:** {d['tenor']}")
+            st.write(f"**Tujuan:** {d['tujuan']}")
 
         st.info("Semua data (termasuk nama, pekerjaan, tenor, dll) akan dienkripsi dengan AES-256 saat Anda menekan tombol simpan.")
 
@@ -218,7 +232,7 @@ with tab2:
             nama_label = r[1]  # nama_display (plaintext)
             iv = r[17]         # iv_data
 
-            with st.expander(f"👤 Nasabah: {nama_label} (ID: {r[0]})"):
+            with st.expander(f"👤 Nasabah: {nama_label}"):
                 col_kiri, col_kanan = st.columns(2)
 
                 with col_kiri:
@@ -287,7 +301,7 @@ with tab2:
                         st.warning("Klik tombol di atas untuk mendekripsi")
 
                 st.markdown("---")
-                if st.button(f"🗑️ Hapus Data ID {r[0]}", key=f"del_{r[0]}"):
+                if st.button(f"🗑️ Hapus Data ID ", key=f"del_{r[0]}"):
                     if hapus_data(r[0]):
                         st.success(f"Data Berhasil Dihapus!")
                         time.sleep(1)
