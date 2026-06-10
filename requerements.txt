@@ -1,3 +1,12 @@
+library yang harus di install:
+
+pycryptodome // untuk menangani algoritma kriptografi
+mysql-connector-python //agar python dapat terhubung dengan database
+streamlit // membuat tampilan web dengan streamlit (berbasis python)
+
+
+
+
 -- ============================================================
 --  Safe-Loan: Database Setup
 --  Keamanan: AES-256-CBC + RSA-2048
@@ -19,7 +28,7 @@ CREATE TABLE pengajuan_pinjol (
     nama_display         VARCHAR(255),
 
     -- Data Terenkripsi AES-256-CBC
-    -- Format tiap kolom: ciphertext||encrypted_aes_key||hmac_sha512 (Base64, separator ||)
+    -- Format tiap kolom: ciphertext||encrypted_aes_key||)
     nama_lengkap         TEXT,
     pekerjaan            TEXT,
     perusahaan           TEXT,
