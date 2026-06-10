@@ -1,10 +1,10 @@
 -- ============================================================
 --  Safe-Loan: Database Setup
---  Keamanan: AES-256-CBC + RSA-2048 + HMAC-SHA512
+--  Keamanan: AES-256-CBC + RSA-2048
 --
 --  Catatan format kolom enkripsi:
---  Setiap kolom _enc menyimpan 3 komponen digabung dengan separator "||":
---  FORMAT: <ciphertext_base64>||<encrypted_aes_key_base64>||<hmac_sha512_base64>
+--  Setiap kolom _enc menyimpan 2 komponen digabung dengan separator "||":
+--  FORMAT: <ciphertext_base64>||<encrypted_aes_key_base64>>
 --
 --  Jalankan file ini di MySQL/phpMyAdmin sebelum menjalankan app.
 -- ============================================================
