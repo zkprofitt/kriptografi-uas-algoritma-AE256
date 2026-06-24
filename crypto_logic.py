@@ -35,7 +35,7 @@ def load_private_key():
 def encrypt_data(plaintext, common_iv=None):
     # 1. Generate AES key acak 256-bit (32 byte)
     aes_key = os.urandom(32)
-
+    print(f"DEBUG - AES Key (base64) : {base64.b64encode(aes_key).decode()}")
     # 2. Enkripsi data dengan AES-256-CBC
     iv = common_iv if common_iv else os.urandom(16)
     cipher_aes = AES.new(aes_key, AES.MODE_CBC, iv)
