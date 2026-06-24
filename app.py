@@ -51,8 +51,8 @@ def dec(gabungan, iv_b64):
 
 # --- UI STREAMLIT ---
 st.set_page_config(page_title="Safe-Loan - AES256+RSA", layout="wide")
-st.title(" Safe-Loan: Sistem Pengajuan Pinjaman Terenkripsi")
-st.caption("🔐 Keamanan: AES-256-CBC + RSA-2048")
+st.title("Safe-Loan: Sistem Pengajuan Pinjaman Terenkripsi")
+st.caption("Keamanan: AES-256-CBC + RSA-2048")
 st.markdown("---")
 
 # Cek ketersediaan file kunci RSA
@@ -162,17 +162,17 @@ with tab1:
             st.write(f"**Tenor:** {d['tenor']}")
             st.write(f"**Tujuan:** {d['tujuan']}")
 
-        st.info("🔐 Semua data akan dienkripsi dengan **AES-256-CBC + RSA-2048** saat Anda menekan tombol simpan.")
+        st.info("Semua data akan dienkripsi dengan **AES-256-CBC + RSA-2048** saat Anda menekan tombol simpan.")
 
         agree = st.checkbox("Saya menyatakan data ini benar dan bersedia diproses secara aman.")
 
         col_btn1, col_btn2 = st.columns([1, 4])
         with col_btn1:
-            if st.button("⬅️ Batal"):
+            if st.button("Batal"):
                 st.session_state.confirm_mode = False
                 st.rerun()
         with col_btn2:
-            if st.button("🔥 KONFIRMASI & SIMPAN DATA"):
+            if st.button("KONFIRMASI & SIMPAN DATA"):
                 if agree:
                     try:
                         with st.spinner("🔐 Mengenkripsi data dengan AES-256 + RSA-2048..."):
@@ -245,7 +245,7 @@ with tab2:
             def preview(val):
                 return f"`{str(val)[:35]}...`"
 
-            with st.expander(f"👤 Nasabah: {nama_label} (ID: {r[0]})"):
+            with st.expander(f"👤 Nasabah: {nama_label}"):
                 col_kiri, col_kanan = st.columns(2)
 
                 with col_kiri:
@@ -269,7 +269,7 @@ with tab2:
 
                 with col_kanan:
                     st.markdown("### 🔓 Hasil Dekripsi")
-                    if st.button(f"Lihat Data Asli ID {r[0]}", key=f"dec_{r[0]}"):
+                    if st.button(f"Lihat Data Asli", key=f"dec_{r[0]}"):
                         with st.spinner("🔓 Mendekripsi data..."):
                             d_nama      = dec(r[2],  iv_b64)
                             d_pekerjaan = dec(r[3],  iv_b64)
@@ -316,7 +316,7 @@ with tab2:
                         st.warning("Klik tombol di atas untuk mendekripsi")
 
                 st.markdown("---")
-                if st.button(f"🗑️ Hapus Data ID {r[0]}", key=f"del_{r[0]}"):
+                if st.button(f"🗑️ Hapus Data", key=f"del_{r[0]}"):
                     if hapus_data(r[0]):
                         st.success("Data Berhasil Dihapus!")
                         time.sleep(1)
@@ -338,20 +338,20 @@ with tab3:
     col_input1, col_input2 = st.columns(2)
     with col_input1:
         input_ct = st.text_area(
-            "🔒 Ciphertext (dari database)",
+            "Ciphertext (dari database)",
             placeholder="Contoh: s7SO3GFldqSkOomCevnu+kA==",
             help="Ambil dari kolom ciphertext di database (bagian sebelum ||)"
         )
     with col_input2:
         input_iv = st.text_area(
-            "🔑 IV Data (dari kolom iv_data)",
+            "IV Data (dari kolom iv_data)",
             placeholder="Contoh: 3iuLfJ5jL1+wyS6kVLNj==",
             help="Ambil dari kolom iv_data di database"
         )
 
     jumlah_percobaan = st.slider("Jumlah Percobaan", min_value=100, max_value=3000, value=3000, step=100)
 
-    if st.button("🚀 Mulai Simulasi Brute-Force", type="primary"):
+    if st.button("Mulai Simulasi Brute-Force", type="primary"):
         if not input_ct.strip() or not input_iv.strip():
             st.error("Ciphertext dan IV wajib diisi!")
         else:
@@ -395,15 +395,18 @@ with tab3:
                             f"Status: ❌ Gagal (padding error)"
                         )
 
-                    # Update tampilan setiap 50 percobaan
+                    # Update progress bar saja selama proses berlangsung
                     if i % 50 == 0 or i == jumlah_percobaan:
                         progress.progress(i / jumlah_percobaan)
-                        log_area.text_area(
-                            "Log Percobaan",
-                            value="\n".join(log_lines[-100:]),
-                            height=300,
-                            key=f"log_{i}"
-                        )
+                        status_box.info(f"⏳ Sedang mencoba kunci ke-{i:,} dari {jumlah_percobaan:,}...")
+
+                # Setelah semua selesai, tampilkan semua log sekaligus
+                log_area.text_area(
+                    "Log Percobaan (semua hasil)",
+                    value="\n".join(log_lines),
+                    height=500,
+                )
+                status_box.empty()
 
                 waktu_selesai = time.perf_counter()
                 total_waktu   = waktu_selesai - waktu_mulai
