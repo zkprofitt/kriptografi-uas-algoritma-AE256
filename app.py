@@ -51,8 +51,8 @@ def dec(gabungan, iv_b64):
 
 # --- UI STREAMLIT ---
 st.set_page_config(page_title="Safe-Loan - AES256+RSA", layout="wide")
-st.title("🚀 Safe-Loan: Sistem Pengajuan Pinjaman Terenkripsi")
-st.caption("🔐 Keamanan: AES-256-CBC + RSA-2048")
+st.title("Safe-Loan: Sistem Pengajuan Pinjaman Terenkripsi")
+st.caption("Keamanan: AES-256-CBC + RSA-2048")
 st.markdown("---")
 
 # Cek ketersediaan file kunci RSA
@@ -60,7 +60,7 @@ if not os.path.exists("public_key.pem") or not os.path.exists("private_key.pem")
     st.error("⚠️ File kunci RSA tidak ditemukan! Jalankan `python generate_keys.py` terlebih dahulu.")
     st.stop()
 
-tab1, tab2 = st.tabs(["📝 Form Pengajuan", "🖥️ Panel Admin (Database)"])
+tab1, tab2, tab3 = st.tabs(["📝 Form Pengajuan", "🖥️ Panel Admin (Database)", "🔐 Uji Keamanan"])
 
 with tab1:
     st.subheader("Pendaftaran Nasabah & Pengajuan Pinjaman")
@@ -162,17 +162,17 @@ with tab1:
             st.write(f"**Tenor:** {d['tenor']}")
             st.write(f"**Tujuan:** {d['tujuan']}")
 
-        st.info("🔐 Semua data akan dienkripsi dengan **AES-256-CBC + RSA-2048** saat Anda menekan tombol simpan.")
+        st.info("Semua data akan dienkripsi dengan **AES-256-CBC + RSA-2048** saat Anda menekan tombol simpan.")
 
         agree = st.checkbox("Saya menyatakan data ini benar dan bersedia diproses secara aman.")
 
         col_btn1, col_btn2 = st.columns([1, 4])
         with col_btn1:
-            if st.button("⬅️ Batal"):
+            if st.button("Batal"):
                 st.session_state.confirm_mode = False
                 st.rerun()
         with col_btn2:
-            if st.button("🔥 KONFIRMASI & SIMPAN DATA"):
+            if st.button("KONFIRMASI & SIMPAN DATA"):
                 if agree:
                     try:
                         with st.spinner("🔐 Mengenkripsi data dengan AES-256 + RSA-2048..."):
@@ -269,7 +269,7 @@ with tab2:
 
                 with col_kanan:
                     st.markdown("### 🔓 Hasil Dekripsi")
-                    if st.button(f"Lihat Data Asli ID {r[0]}", key=f"dec_{r[0]}"):
+                    if st.button(f"Lihat Data Asli", key=f"dec_{r[0]}"):
                         with st.spinner("🔓 Mendekripsi data..."):
                             d_nama      = dec(r[2],  iv_b64)
                             d_pekerjaan = dec(r[3],  iv_b64)
@@ -316,7 +316,7 @@ with tab2:
                         st.warning("Klik tombol di atas untuk mendekripsi")
 
                 st.markdown("---")
-                if st.button(f"🗑️ Hapus Data ID ", key=f"del_{r[0]}"):
+                if st.button(f"🗑️ Hapus Data", key=f"del_{r[0]}"):
                     if hapus_data(r[0]):
                         st.success("Data Berhasil Dihapus!")
                         time.sleep(1)
@@ -326,3 +326,126 @@ with tab2:
         conn.close()
     except Exception as e:
         st.error(f"Gagal memuat data: {e}")
+
+with tab3:
+    st.subheader("🔐 Uji Keamanan: Simulasi Brute-Force AES-256")
+    st.markdown("""
+    Simulasi ini membuktikan bahwa ciphertext yang tersimpan di database **tidak bisa dipecahkan** 
+    dengan metode brute-force, meskipun penyerang berhasil mencuri data dari database.
+    """)
+    st.markdown("---")
+
+    col_input1, col_input2 = st.columns(2)
+    with col_input1:
+        input_ct = st.text_area(
+            "Ciphertext (dari database)",
+            placeholder="Contoh: s7SO3GFldqSkOomCevnu+kA==",
+            help="Ambil dari kolom ciphertext di database (bagian sebelum ||)"
+        )
+    with col_input2:
+        input_iv = st.text_area(
+            "IV Data (dari kolom iv_data)",
+            placeholder="Contoh: 3iuLfJ5jL1+wyS6kVLNj==",
+            help="Ambil dari kolom iv_data di database"
+        )
+
+    jumlah_percobaan = st.slider("Jumlah Percobaan", min_value=100, max_value=3000, value=3000, step=100)
+
+    if st.button("Mulai Simulasi Brute-Force", type="primary"):
+        if not input_ct.strip() or not input_iv.strip():
+            st.error("Ciphertext dan IV wajib diisi!")
+        else:
+            try:
+                import base64
+                from Crypto.Cipher import AES
+                from Crypto.Util.Padding import unpad
+                import os, time
+
+                ct_raw = base64.b64decode(input_ct.strip())
+                iv_raw = base64.b64decode(input_iv.strip())
+
+                st.info(f"🔄 Memulai {jumlah_percobaan:,} percobaan kunci AES-256 acak...")
+                st.markdown("---")
+
+                log_area   = st.empty()
+                progress   = st.progress(0)
+                status_box = st.empty()
+
+                ditemukan   = False
+                log_lines   = []
+                waktu_mulai = time.perf_counter()
+
+                for i in range(1, jumlah_percobaan + 1):
+                    kunci_coba = os.urandom(32)
+
+                    try:
+                        cipher = AES.new(kunci_coba, AES.MODE_CBC, iv_raw)
+                        hasil  = unpad(cipher.decrypt(ct_raw), AES.block_size)
+                        teks   = hasil.decode("utf-8")
+                        log_lines.append(
+                            f"Percobaan {i:>4} | Kunci: {kunci_coba.hex()[:20]}... | "
+                            f"Hasil: {teks[:20]} | Status: ⚠️ VALID PADDING"
+                        )
+                        ditemukan = True
+                        break
+
+                    except Exception:
+                        log_lines.append(
+                            f"Percobaan {i:>4} | Kunci: {kunci_coba.hex()[:20]}... | "
+                            f"Status: ❌ Gagal (padding error)"
+                        )
+
+                    # Update progress bar saja selama proses berlangsung
+                    if i % 50 == 0 or i == jumlah_percobaan:
+                        progress.progress(i / jumlah_percobaan)
+                        status_box.info(f"⏳ Sedang mencoba kunci ke-{i:,} dari {jumlah_percobaan:,}...")
+
+                # Setelah semua selesai, tampilkan semua log sekaligus
+                log_area.text_area(
+                    "Log Percobaan (semua hasil)",
+                    value="\n".join(log_lines),
+                    height=500,
+                )
+                status_box.empty()
+
+                waktu_selesai = time.perf_counter()
+                total_waktu   = waktu_selesai - waktu_mulai
+                kecepatan     = jumlah_percobaan / total_waktu
+
+                total_kunci    = 2 ** 256
+                estimasi_detik = total_kunci / kecepatan
+                estimasi_tahun = estimasi_detik / (60 * 60 * 24 * 365)
+
+                progress.progress(1.0)
+                st.markdown("---")
+                st.subheader("📊 Hasil Simulasi")
+
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    st.metric("Total Percobaan", f"{jumlah_percobaan:,}")
+                with col_b:
+                    st.metric("Total Waktu", f"{total_waktu:.2f} detik")
+                with col_c:
+                    st.metric("Kecepatan", f"{kecepatan:,.0f} kunci/detik")
+
+                st.markdown("---")
+                st.subheader("🔍 Kesimpulan")
+
+                if not ditemukan:
+                    st.error(f"❌ Setelah **{jumlah_percobaan:,} percobaan**, kunci AES-256 **TIDAK DITEMUKAN**.")
+                else:
+                    st.warning(f"⚠️ Kunci ditemukan di percobaan ke-{i} (kemungkinan sangat kecil terjadi).")
+
+                st.info(f"""
+**Proyeksi Brute-Force Penuh:**
+- Ruang kunci AES-256 : **2²⁵⁶ kemungkinan**
+- Kecepatan komputer  : **{kecepatan:,.0f} kunci/detik**
+- Estimasi waktu      : **{estimasi_tahun:.2e} tahun**
+- Usia alam semesta   : **~1.38 × 10¹⁰ tahun**
+
+**Kesimpulan:** Brute-force AES-256 membutuhkan waktu {estimasi_tahun:.2e} tahun — jauh melampaui usia alam semesta. 
+Enkripsi AES-256 pada sistem Safe-Loan **TERBUKTI AMAN** terhadap serangan brute-force.
+                """)
+
+            except Exception as e:
+                st.error(f"Error: {e}. Pastikan Ciphertext dan IV valid (format Base64).")
