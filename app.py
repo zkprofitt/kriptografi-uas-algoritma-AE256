@@ -2,6 +2,7 @@ import streamlit as st
 import mysql.connector
 import base64
 import time
+import os
 from Crypto.Cipher import AES
 from crypto_logic import encrypt_data, decrypt_data
 
@@ -22,8 +23,7 @@ def hapus_data(id_nasabah):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = "DELETE FROM pengajuan_pinjol WHERE id = %s"
-        cursor.execute(query, (id_nasabah,))
+        cursor.execute("DELETE FROM pengajuan_pinjol WHERE id = %s", (id_nasabah,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -33,10 +33,32 @@ def hapus_data(id_nasabah):
         return False
 
 
+# --- HELPER: Enkripsi satu field ---
+# Format simpan: "ciphertext||RSA_key_enc"
+def enc(nilai, iv):
+    iv_b64, ct_b64, key_b64 = encrypt_data(nilai, iv)
+    return f"{ct_b64}||{key_b64}"
+
+# --- HELPER: Dekripsi satu field ---
+def dec(gabungan, iv_b64):
+    try:
+        parts = gabungan.split("||")
+        ct_b64, key_b64 = parts[0], parts[1]
+        return decrypt_data(iv_b64, ct_b64, key_b64)
+    except:
+        return "Gagal membaca data"
+
+
 # --- UI STREAMLIT ---
-st.set_page_config(page_title="Pinjol Pro - AES256", layout="wide")
+st.set_page_config(page_title="Safe-Loan - AES256+RSA", layout="wide")
 st.title("🚀 Safe-Loan: Sistem Pengajuan Pinjaman Terenkripsi")
+st.caption("🔐 Keamanan: AES-256-CBC + RSA-2048")
 st.markdown("---")
+
+# Cek ketersediaan file kunci RSA
+if not os.path.exists("public_key.pem") or not os.path.exists("private_key.pem"):
+    st.error("⚠️ File kunci RSA tidak ditemukan! Jalankan `python generate_keys.py` terlebih dahulu.")
+    st.stop()
 
 tab1, tab2 = st.tabs(["📝 Form Pengajuan", "🖥️ Panel Admin (Database)"])
 
@@ -84,18 +106,17 @@ with tab1:
                 if "@" not in email: errors.append("Format Email tidak valid.")
 
                 gaji_clean = gaji.replace('.', '').replace(',', '').strip()
-                nom_clean = nominal.replace('.', '').replace(',', '').strip()
+                nom_clean  = nominal.replace('.', '').replace(',', '').strip()
 
                 if not gaji_clean.isdigit(): errors.append("Gaji harus angka.")
-                if not nom_clean.isdigit(): errors.append("Nominal harus angka.")
-                if not nama_pt.strip(): errors.append("Nama Perusahaan wajib diisi.")
-                if not tujuan.strip(): errors.append("Tujuan Pinjaman wajib diisi.")
-                if not darurat.strip(): errors.append("Kontak Darurat wajib diisi.")
-                if not bank.strip(): errors.append("Rekening wajib diisi.")
+                if not nom_clean.isdigit():  errors.append("Nominal harus angka.")
+                if not nama_pt.strip():      errors.append("Nama Perusahaan wajib diisi.")
+                if not tujuan.strip():       errors.append("Tujuan Pinjaman wajib diisi.")
+                if not darurat.strip():      errors.append("Kontak Darurat wajib diisi.")
+                if not bank.strip():         errors.append("Rekening wajib diisi.")
 
                 if nama.lower().strip() != nama_bank_user.lower().strip():
                     errors.append("⚠️ Nama Lengkap KTP dan Nama Pemegang Akun Bank harus sama persis!")
-
                 if not nama_bank_user.strip():
                     errors.append("Nama Pemegang Akun Bank wajib diisi.")
 
@@ -141,7 +162,7 @@ with tab1:
             st.write(f"**Tenor:** {d['tenor']}")
             st.write(f"**Tujuan:** {d['tujuan']}")
 
-        st.info("Semua data (termasuk nama, pekerjaan, tenor, dll) akan dienkripsi dengan AES-256 saat Anda menekan tombol simpan.")
+        st.info("🔐 Semua data akan dienkripsi dengan **AES-256-CBC + RSA-2048** saat Anda menekan tombol simpan.")
 
         agree = st.checkbox("Saya menyatakan data ini benar dan bersedia diproses secara aman.")
 
@@ -154,59 +175,49 @@ with tab1:
             if st.button("🔥 KONFIRMASI & SIMPAN DATA"):
                 if agree:
                     try:
-                        # Generate satu IV untuk semua field
-                        temp_cipher = AES.new(b'ini_kunci_rahasia_32_byte_fix_ok', AES.MODE_CBC)
-                        main_iv = temp_cipher.iv
+                        with st.spinner("🔐 Mengenkripsi data dengan AES-256 + RSA-2048..."):
+                            # Generate satu IV bersama untuk semua field
+                            iv = os.urandom(16)
+                            iv_b64 = base64.b64encode(iv).decode('utf-8')
 
-                        # Enkripsi SEMUA field (termasuk yang sebelumnya plaintext)
-                        _, nama_e      = encrypt_data(d['nama'], main_iv)
-                        _, pekerjaan_e = encrypt_data(d['pekerjaan'], main_iv)
-                        _, nama_pt_e   = encrypt_data(d['nama_pt'], main_iv)
-                        _, tenor_e     = encrypt_data(d['tenor'], main_iv)
-                        _, tujuan_e    = encrypt_data(d['tujuan'], main_iv)
-                        _, status_e    = encrypt_data(d['status'], main_iv)
-                        _, n_bank_e    = encrypt_data(d['nama_bank_user'], main_iv)
-                        _, nik_e       = encrypt_data(d['nik'], main_iv)
-                        _, almt_e      = encrypt_data(d['alamat'], main_iv)
-                        _, mail_e      = encrypt_data(d['email'], main_iv)
-                        _, gaji_e      = encrypt_data(d['gaji'], main_iv)
-                        _, hp_e        = encrypt_data(d['hp'], main_iv)
-                        _, darurat_e   = encrypt_data(d['darurat'], main_iv)
-                        _, bank_e      = encrypt_data(d['bank'], main_iv)
-                        _, nom_e       = encrypt_data(d['nominal'], main_iv)
-
-                        iv_savable = base64.b64encode(main_iv).decode('utf-8')
+                            nama_e      = enc(d['nama'],           iv)
+                            pekerjaan_e = enc(d['pekerjaan'],      iv)
+                            nama_pt_e   = enc(d['nama_pt'],        iv)
+                            tenor_e     = enc(d['tenor'],          iv)
+                            tujuan_e    = enc(d['tujuan'],         iv)
+                            status_e    = enc(d['status'],         iv)
+                            n_bank_e    = enc(d['nama_bank_user'], iv)
+                            nik_e       = enc(d['nik'],            iv)
+                            almt_e      = enc(d['alamat'],         iv)
+                            mail_e      = enc(d['email'],          iv)
+                            gaji_e      = enc(d['gaji'],           iv)
+                            hp_e        = enc(d['hp'],             iv)
+                            darurat_e   = enc(d['darurat'],        iv)
+                            bank_e      = enc(d['bank'],           iv)
+                            nom_e       = enc(d['nominal'],        iv)
 
                         conn = get_db_connection()
-                        cur = conn.cursor()
-
-                        # Simpan nama_display (plaintext) untuk label expander
-                        # Semua kolom lain sudah terenkripsi
-                        sql = """INSERT INTO pengajuan_pinjol 
+                        cur  = conn.cursor()
+                        sql  = """INSERT INTO pengajuan_pinjol 
                                  (nama_display, nama_lengkap, pekerjaan, perusahaan, tenor, tujuan_pinjaman, status_nikah,
                                   nama_bank_user_enc, nik_enc, alamat_enc, email_enc, gaji_enc, hp_enc, 
                                   kontak_darurat_enc, rekening_enc, nominal_pinjaman_enc, iv_data) 
                                  VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
                         cur.execute(sql, (
-                            d['nama'],      # nama_display: plaintext untuk label
-                            nama_e,         # nama_lengkap: terenkripsi
-                            pekerjaan_e,    # pekerjaan: terenkripsi
-                            nama_pt_e,      # perusahaan: terenkripsi
-                            tenor_e,        # tenor: terenkripsi
-                            tujuan_e,       # tujuan_pinjaman: terenkripsi
-                            status_e,       # status_nikah: terenkripsi
+                            d['nama'],
+                            nama_e, pekerjaan_e, nama_pt_e, tenor_e, tujuan_e, status_e,
                             n_bank_e, nik_e, almt_e, mail_e, gaji_e, hp_e,
                             darurat_e, bank_e, nom_e,
-                            iv_savable
+                            iv_b64
                         ))
                         conn.commit()
                         cur.close()
                         conn.close()
 
-                        st.success("✅ BERHASIL DISIMPAN! Semua data terenkripsi.")
+                        st.success("✅ BERHASIL DISIMPAN! Data dienkripsi dengan AES-256 + RSA-2048.")
                         time.sleep(1.5)
                         st.session_state.confirm_mode = False
-                        st.session_state.temp_data = {}
+                        st.session_state.temp_data    = {}
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
@@ -217,61 +228,65 @@ with tab2:
     st.subheader("🖥️ Panel Admin: Monitoring Data Terenkripsi")
     try:
         conn = get_db_connection()
-        cur = conn.cursor()
+        cur  = conn.cursor()
         cur.execute("SELECT * FROM pengajuan_pinjol ORDER BY id DESC")
         rows = cur.fetchall()
 
         for r in rows:
-            # Urutan kolom setelah ALTER TABLE:
             # 0:id, 1:nama_display, 2:nama_lengkap(enc), 3:pekerjaan(enc), 4:perusahaan(enc),
             # 5:tenor(enc), 6:tujuan_pinjaman(enc), 7:status_nikah(enc),
             # 8:nama_bank_user_enc, 9:nik_enc, 10:alamat_enc, 11:email_enc,
             # 12:gaji_enc, 13:hp_enc, 14:kontak_darurat_enc, 15:rekening_enc,
             # 16:nominal_pinjaman_enc, 17:iv_data, 18:tgl_pengajuan
 
-            nama_label = r[1]  # nama_display (plaintext)
-            iv = r[17]         # iv_data
+            nama_label = r[1]
+            iv_b64     = r[17]
+
+            def preview(val):
+                return f"`{str(val)[:35]}...`"
 
             with st.expander(f"👤 Nasabah: {nama_label}"):
                 col_kiri, col_kanan = st.columns(2)
 
                 with col_kiri:
                     st.markdown("### 🔐 Data Terenkripsi (DB)")
-                    st.write(f"**Nama Lengkap Enc:** `{str(r[2])[:30]}...`")
-                    st.write(f"**NIK Enc:** `{str(r[9])[:30]}...`")
-                    st.write(f"**Status Nikah Enc:** `{str(r[7])[:30]}...`")
-                    st.write(f"**HP Enc:** `{str(r[13])[:30]}...`")
-                    st.write(f"**Email Enc:** `{str(r[11])[:30]}...`")
-                    st.write(f"**Pekerjaan Enc:** `{str(r[3])[:30]}...`")
-                    st.write(f"**Perusahaan Enc:** `{str(r[4])[:30]}...`")
-                    st.write(f"**Gaji Enc:** `{str(r[12])[:30]}...`")
-                    st.write(f"**Nama Bank Enc:** `{str(r[8])[:30]}...`")
-                    st.write(f"**Rekening Enc:** `{str(r[15])[:30]}...`")
-                    st.write(f"**Kontak Darurat Enc:** `{str(r[14])[:30]}...`")
-                    st.write(f"**Nominal Pinjaman Enc:** `{str(r[16])[:30]}...`")
-                    st.write(f"**Tenor Enc:** `{str(r[5])[:30]}...`")
-                    st.write(f"**Tujuan Pinjaman Enc:** `{str(r[6])[:30]}...`")
-                    st.write(f"**IV Data:** `{iv}`")
+                    st.write(f"**Nama Lengkap Enc:** {preview(r[2])}")
+                    st.write(f"**Status Nikah Enc:** {preview(r[7])}")
+                    st.write(f"**Pekerjaan Enc:** {preview(r[3])}")
+                    st.write(f"**Perusahaan Enc:** {preview(r[4])}")
+                    st.write(f"**Tenor Enc:** {preview(r[5])}")
+                    st.write(f"**Tujuan Pinjaman Enc:** {preview(r[6])}")
+                    st.write(f"**Nama Bank Enc:** {preview(r[8])}")
+                    st.write(f"**NIK Enc:** {preview(r[9])}")
+                    st.write(f"**Alamat Enc:** {preview(r[10])}")
+                    st.write(f"**Email Enc:** {preview(r[11])}")
+                    st.write(f"**Gaji Enc:** {preview(r[12])}")
+                    st.write(f"**HP Enc:** {preview(r[13])}")
+                    st.write(f"**Kontak Darurat Enc:** {preview(r[14])}")
+                    st.write(f"**Rekening Enc:** {preview(r[15])}")
+                    st.write(f"**Nominal Pinjaman Enc:** {preview(r[16])}")
+                    st.write(f"**IV Data:** `{iv_b64}`")
 
                 with col_kanan:
                     st.markdown("### 🔓 Hasil Dekripsi")
                     if st.button(f"Lihat Data Asli ID {r[0]}", key=f"dec_{r[0]}"):
-                        d_nama      = decrypt_data(iv, r[2])
-                        d_pekerjaan = decrypt_data(iv, r[3])
-                        d_pt        = decrypt_data(iv, r[4])
-                        d_tenor     = decrypt_data(iv, r[5])
-                        d_tujuan    = decrypt_data(iv, r[6])
-                        d_status    = decrypt_data(iv, r[7])
-                        d_n_bank    = decrypt_data(iv, r[8])
-                        d_nik       = decrypt_data(iv, r[9])
-                        d_almt      = decrypt_data(iv, r[10])
-                        d_mail      = decrypt_data(iv, r[11])
-                        d_gaji      = format_rupiah(decrypt_data(iv, r[12]))
-                        d_hp        = decrypt_data(iv, r[13])
-                        d_darurat   = decrypt_data(iv, r[14])
-                        d_rek       = decrypt_data(iv, r[15])
-                        d_nom       = format_rupiah(decrypt_data(iv, r[16]))
-                        tgl         = r[18]  # tgl_pengajuan (plaintext TIMESTAMP)
+                        with st.spinner("🔓 Mendekripsi data..."):
+                            d_nama      = dec(r[2],  iv_b64)
+                            d_pekerjaan = dec(r[3],  iv_b64)
+                            d_pt        = dec(r[4],  iv_b64)
+                            d_tenor     = dec(r[5],  iv_b64)
+                            d_tujuan    = dec(r[6],  iv_b64)
+                            d_status    = dec(r[7],  iv_b64)
+                            d_n_bank    = dec(r[8],  iv_b64)
+                            d_nik       = dec(r[9],  iv_b64)
+                            d_almt      = dec(r[10], iv_b64)
+                            d_mail      = dec(r[11], iv_b64)
+                            d_gaji      = format_rupiah(dec(r[12], iv_b64))
+                            d_hp        = dec(r[13], iv_b64)
+                            d_darurat   = dec(r[14], iv_b64)
+                            d_rek       = dec(r[15], iv_b64)
+                            d_nom       = format_rupiah(dec(r[16], iv_b64))
+                            tgl         = r[18]
 
                         st.success("✅ Dekripsi Berhasil")
                         st.markdown("#### 👤 Data Identitas")
@@ -303,7 +318,7 @@ with tab2:
                 st.markdown("---")
                 if st.button(f"🗑️ Hapus Data ID ", key=f"del_{r[0]}"):
                     if hapus_data(r[0]):
-                        st.success(f"Data Berhasil Dihapus!")
+                        st.success("Data Berhasil Dihapus!")
                         time.sleep(1)
                         st.rerun()
 

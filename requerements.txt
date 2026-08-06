@@ -1,31 +1,51 @@
 library yang harus di install:
 
-pycryptodome
-mysql-connector-python
-streamlit
+pycryptodome // untuk menangani algoritma kriptografi
+mysql-connector-python //agar python dapat terhubung dengan database
+streamlit // membuat tampilan web dengan streamlit (berbasis python)
 
 
-nama database nya = db_fintech
-//struktur database
+
+
+-- ============================================================
+--  Safe-Loan: Database Setup
+--  Keamanan: AES-256-CBC + RSA-2048
+--
+--  Catatan format kolom enkripsi:
+--  Setiap kolom _enc menyimpan 2 komponen digabung dengan separator "||":
+--  FORMAT: <ciphertext_base64>||<encrypted_aes_key_base64>>
+--
+--  Jalankan file ini di MySQL/phpMyAdmin sebelum menjalankan app.
+-- ============================================================
+
+CREATE DATABASE IF NOT EXISTS db_fintech;
+USE db_fintech;
+
 CREATE TABLE pengajuan_pinjol (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nama_lengkap VARCHAR(255),
-    pekerjaan VARCHAR(100),
-    perusahaan VARCHAR(255),
-    tenor VARCHAR(50),
-    tujuan_pinjaman TEXT,
-    status_nikah VARCHAR(50),
+    id                   INT AUTO_INCREMENT PRIMARY KEY,
 
-    -- Data Terenkripsi
-    nik_enc TEXT,
-    alamat_enc TEXT,
-    email_enc TEXT,
-    gaji_enc TEXT,
-    hp_enc TEXT,
-    kontak_darurat_enc TEXT,
-    rekening_enc TEXT,
+    -- Label display (plaintext, untuk identifikasi di Panel Admin)
+    nama_display         VARCHAR(255),
+
+    -- Data Terenkripsi AES-256-CBC
+    -- Format tiap kolom: ciphertext||encrypted_aes_key||)
+    nama_lengkap         TEXT,
+    pekerjaan            TEXT,
+    perusahaan           TEXT,
+    tenor                TEXT,
+    tujuan_pinjaman      TEXT,
+    status_nikah         TEXT,
+    nama_bank_user_enc   TEXT,
+    nik_enc              TEXT,
+    alamat_enc           TEXT,
+    email_enc            TEXT,
+    gaji_enc             TEXT,
+    hp_enc               TEXT,
+    kontak_darurat_enc   TEXT,
+    rekening_enc         TEXT,
     nominal_pinjaman_enc TEXT,
 
+<<<<<<< HEAD
     -- Kunci pengacak unik per baris
     iv_data VARCHAR(255),
     tgl_pengajuan TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -72,6 +92,9 @@ CREATE TABLE pengajuan_pinjol (
     nominal_pinjaman_enc TEXT,
 
     -- IV unik per baris (Base64), digunakan untuk proses dekripsi
+=======
+    -- IV bersama per transaksi (Base64), digunakan untuk proses dekripsi
+>>>>>>> tambahan-algoritma
     iv_data              VARCHAR(255),
 
     -- Timestamp otomatis saat data dimasukkan
