@@ -1,10 +1,17 @@
 # 🔐 Safe-Loan: Implementasi AES-256 dan RSA-2048 untuk Pengamanan Data Nasabah Pinjaman Digital Berbasis Web 🔐
 
-Aplikasi berbasis web yang mengimplementasikan **Sistem Kriptografi Hibrida** (AES-256 mode CBC dan RSA-2048 skema PKCS1_OAEP) untuk mengamankan data sensitif nasabah pinjaman digital pada level *Data-at-Rest* (database)[cite: 1]. Proyek ini disusun untuk memenuhi tugas mata kuliah **Kriptografi** di Universitas Bina Sarana Informatika.
+Aplikasi berbasis web yang mengimplementasikan **Sistem Kriptografi Hibrida** (AES-256 mode CBC dan RSA-2048 skema PKCS1_OAEP) untuk mengamankan data sensitif nasabah pinjaman digital pada level *Data-at-Rest* (database). Proyek ini disusun untuk memenuhi tugas mata kuliah **Kriptografi** di Universitas Bina Sarana Informatika.
 
+## Tampilan formulir_pengajuan
 ![Preview Web](./assets/formulir_pengajuan.png)
 
-## 👨‍💻 Pengembang[cite: 1]
+## Tampilan Menu Admin (Melihat Data Enkripsi dan Dekripsi)
+![Preview Web](./assets/panel_admin.png)
+
+## Tampilan Menu Simulasi Serangan (Brute-Force)
+![Preview Web](./assets/simulasi_serangan.png)
+
+## 👨‍💻 Pengembang
 
 * Muhamad Rianda (17230124)
 * Zaky Daffa Fiddien (17230060)
